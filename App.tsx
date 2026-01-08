@@ -47,8 +47,17 @@ const AppContent: React.FC = () => {
     }
   };
 
+  // Mapeig de mida de lletra a classes de Tailwind o estils inline
+  // Per fer-ho efectiu globalment, canviem la mida de la font del contenidor arrel
+  const fontSizeStyle = {
+    fontSize: context?.fontSize === 'extra' ? '21px' : context?.fontSize === 'large' ? '18px' : '16px'
+  };
+
   return (
-    <div className="bg-gray-100 dark:bg-gray-900 min-h-screen flex text-gray-800 dark:text-gray-200">
+    <div 
+      className="bg-gray-100 dark:bg-gray-900 min-h-screen flex text-gray-800 dark:text-gray-200"
+      style={fontSizeStyle}
+    >
       <PWAInstallPrompt />
       <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} />
       <main className="flex-1 flex flex-col transition-all duration-300">

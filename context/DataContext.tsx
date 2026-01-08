@@ -4,6 +4,8 @@ import { Bull, Calf, Cow, Location, Treatment, CalfStatus, UID, Sex, AnimalStatu
 import { mockBulls, mockCalves, mockCows, mockLocations, mockTreatments } from '../data/mockData';
 import { db } from '../db';
 
+export type FontSize = 'normal' | 'large' | 'extra';
+
 interface DataContextProps {
   bulls: Bull[];
   locations: Location[];
@@ -11,6 +13,8 @@ interface DataContextProps {
   calves: Calf[];
   treatments: Treatment[];
   isLoading: boolean;
+  fontSize: FontSize;
+  setFontSize: (size: FontSize) => void;
   addCow: (cow: Omit<Cow, 'id'>) => Promise<void>;
   updateCow: (cow: Cow) => Promise<void>;
   deleteCow: (id: UID) => Promise<void>;
@@ -41,6 +45,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [calves, setCalves] = useState<Calf[]>([]);
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [fontSize, setFontSizeState] = useState<FontSize>((localStorage.getItem('fontSize') as FontSize) || 'normal');
+
+  const setFontSize = (size: FontSize) => {
+    setFontSizeState(size);
+    localStorage.setItem('fontSize', size);
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -79,7 +89,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const generateUID = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
-  // --- COW MANAGEMENT ---
   const addCow = async (cow: Omit<Cow, 'id'>) => {
     const newCow: Cow = { ...cow, id: generateUID('cow') };
     await db.cows.add(newCow);
@@ -98,7 +107,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await refreshState();
   };
 
-  // --- CALF MANAGEMENT ---
   const addCalf = async (calf: Omit<Calf, 'id'>) => {
     const newCalf: Calf = { ...calf, id: generateUID('calf') };
     await db.calves.add(newCalf);
@@ -138,7 +146,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await refreshState();
   };
   
-  // --- LOCATION MANAGEMENT ---
   const addLocation = async (location: Omit<Location, 'id'>) => {
     const newLocation: Location = { ...location, id: generateUID('loc') };
     await db.locations.add(newLocation);
@@ -153,7 +160,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await refreshState();
   };
 
-  // --- TREATMENT MANAGEMENT ---
   const addTreatment = async (treatment: Omit<Treatment, 'id'>) => {
     const newTreatment: Treatment = { ...treatment, id: generateUID('treat') };
     await db.treatments.add(newTreatment);
@@ -168,7 +174,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await refreshState();
   };
 
-  // --- BULL MANAGEMENT ---
   const addBull = async (bull: Omit<Bull, 'id'>) => {
     const newBull: Bull = { ...bull, id: generateUID('bull') };
     await db.bulls.add(newBull);
@@ -183,7 +188,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await refreshState();
   };
 
-  // --- TRASH MANAGEMENT ---
   const batchRestore = async (items: { type: 'Cow' | 'Calf' | 'Bull' | 'Location' | 'Treatment', id: UID }[]) => {
       const restorePromises: Promise<any>[] = [];
       items.forEach(item => {
@@ -221,6 +225,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const value = {
     bulls, locations, cows, calves, treatments, isLoading,
+    fontSize, setFontSize,
     addCow, updateCow, deleteCow, batchUpdateCowLocations,
     addCalf, updateCalf, deleteCalf, batchSellCalves,
     addLocation, updateLocation, deleteLocation,

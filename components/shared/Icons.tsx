@@ -19,6 +19,7 @@ import {
   ClipboardList,
   Skull,
   FileDown,
+  Type,
 } from 'lucide-react';
 
 export const Icons = {
@@ -41,4 +42,5 @@ export const Icons = {
   Horse: ClipboardList,
   Skull: Skull,
   Export: FileDown,
+  TextSize: Type,
 };
