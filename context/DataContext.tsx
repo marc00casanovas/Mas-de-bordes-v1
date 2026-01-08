@@ -28,8 +28,8 @@ interface DataContextProps {
   updateBull: (bull: Bull) => Promise<void>;
   deleteBull: (id: UID) => Promise<void>;
   batchUpdateCowLocations: (cowIds: UID[], locationId: string) => Promise<void>;
-  batchRestore: (ids: { type: 'Cow' | 'Calf' | 'Bull' | 'Location', id: UID }[]) => Promise<void>;
-  batchPermanentlyDelete: (ids: { type: 'Cow' | 'Calf' | 'Bull' | 'Location', id: UID }[]) => Promise<void>;
+  batchRestore: (ids: { type: 'Cow' | 'Calf' | 'Bull' | 'Location' | 'Treatment', id: UID }[]) => Promise<void>;
+  batchPermanentlyDelete: (ids: { type: 'Cow' | 'Calf' | 'Bull' | 'Location' | 'Treatment', id: UID }[]) => Promise<void>;
 }
 
 export const DataContext = createContext<DataContextProps | undefined>(undefined);
@@ -69,7 +69,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     loadData();
   }, []);
 
-  // Generic function to update state
   const refreshState = async () => {
      setBulls(await db.bulls.toArray());
      setLocations(await db.locations.toArray());
@@ -78,9 +77,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
      setTreatments(await db.treatments.toArray());
   };
 
+  const generateUID = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
   // --- COW MANAGEMENT ---
   const addCow = async (cow: Omit<Cow, 'id'>) => {
-    await db.cows.add(cow as Cow);
+    const newCow: Cow = { ...cow, id: generateUID('cow') };
+    await db.cows.add(newCow);
     await refreshState();
   };
   const updateCow = async (updatedCow: Cow) => {
@@ -98,13 +100,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // --- CALF MANAGEMENT ---
   const addCalf = async (calf: Omit<Calf, 'id'>) => {
-    await db.calves.add(calf as Calf);
+    const newCalf: Calf = { ...calf, id: generateUID('calf') };
+    await db.calves.add(newCalf);
     await refreshState();
   };
 
   const updateCalf = async (updatedCalf: Calf, newLocationId?: string) => {
      if (updatedCalf.status === CalfStatus.Breeding) {
-        // FIX: Use strict equality operator for comparison.
         if (updatedCalf.sex === Sex.Female) {
             if(!newLocationId) {
                 alert("Cal especificar una ubicació per a la nova vaca.");
@@ -116,7 +118,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 locationId: newLocationId,
                 status: AnimalStatus.Alive,
             });
-        } else { // Male
+        } else {
             await addBull({ name: `Toro ${updatedCalf.dib}`, status: AnimalStatus.Alive });
         }
         await db.calves.delete(updatedCalf.id);
@@ -138,7 +140,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   
   // --- LOCATION MANAGEMENT ---
   const addLocation = async (location: Omit<Location, 'id'>) => {
-    await db.locations.add(location as Location);
+    const newLocation: Location = { ...location, id: generateUID('loc') };
+    await db.locations.add(newLocation);
     await refreshState();
   };
   const updateLocation = async (updatedLocation: Location) => {
@@ -152,7 +155,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // --- TREATMENT MANAGEMENT ---
   const addTreatment = async (treatment: Omit<Treatment, 'id'>) => {
-    await db.treatments.add(treatment as Treatment);
+    const newTreatment: Treatment = { ...treatment, id: generateUID('treat') };
+    await db.treatments.add(newTreatment);
     await refreshState();
   };
   const updateTreatment = async (updatedTreatment: Treatment) => {
@@ -166,7 +170,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // --- BULL MANAGEMENT ---
   const addBull = async (bull: Omit<Bull, 'id'>) => {
-    await db.bulls.add(bull as Bull);
+    const newBull: Bull = { ...bull, id: generateUID('bull') };
+    await db.bulls.add(newBull);
     await refreshState();
   };
   const updateBull = async (updatedBull: Bull) => {
@@ -179,7 +184,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   // --- TRASH MANAGEMENT ---
-  const batchRestore = async (items: { type: 'Cow' | 'Calf' | 'Bull' | 'Location', id: UID }[]) => {
+  const batchRestore = async (items: { type: 'Cow' | 'Calf' | 'Bull' | 'Location' | 'Treatment', id: UID }[]) => {
       const restorePromises: Promise<any>[] = [];
       items.forEach(item => {
           switch (item.type) {
@@ -187,28 +192,28 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               case 'Calf': restorePromises.push(db.calves.update(item.id, { status: CalfStatus.Alive })); break;
               case 'Bull': restorePromises.push(db.bulls.update(item.id, { status: AnimalStatus.Alive })); break;
               case 'Location': restorePromises.push(db.locations.update(item.id, { isDeleted: false })); break;
+              case 'Treatment': restorePromises.push(db.treatments.update(item.id, { isDeleted: false })); break;
           }
       });
       await Promise.all(restorePromises);
       await refreshState();
   };
 
-  const batchPermanentlyDelete = async (items: { type: 'Cow' | 'Calf' | 'Bull' | 'Location', id: UID }[]) => {
+  const batchPermanentlyDelete = async (items: { type: 'Cow' | 'Calf' | 'Bull' | 'Location' | 'Treatment', id: UID }[]) => {
       const idsToDelete = {
         Cow: new Set(items.filter(i => i.type === 'Cow').map(i => i.id)),
         Calf: new Set(items.filter(i => i.type === 'Calf').map(i => i.id)),
         Bull: new Set(items.filter(i => i.type === 'Bull').map(i => i.id)),
         Location: new Set(items.filter(i => i.type === 'Location').map(i => i.id)),
+        Treatment: new Set(items.filter(i => i.type === 'Treatment').map(i => i.id)),
       };
-
-      // Dependency checks would go here as before
-      // This is a simplified version for brevity. See previous implementation for full checks.
 
       const deletePromises: Promise<any>[] = [];
       if (idsToDelete.Calf.size > 0) deletePromises.push(db.calves.bulkDelete(Array.from(idsToDelete.Calf) as string[]));
       if (idsToDelete.Cow.size > 0) deletePromises.push(db.cows.bulkDelete(Array.from(idsToDelete.Cow) as string[]));
       if (idsToDelete.Location.size > 0) deletePromises.push(db.locations.bulkDelete(Array.from(idsToDelete.Location) as string[]));
       if (idsToDelete.Bull.size > 0) deletePromises.push(db.bulls.bulkDelete(Array.from(idsToDelete.Bull) as string[]));
+      if (idsToDelete.Treatment.size > 0) deletePromises.push(db.treatments.bulkDelete(Array.from(idsToDelete.Treatment) as string[]));
 
       await Promise.all(deletePromises);
       await refreshState();

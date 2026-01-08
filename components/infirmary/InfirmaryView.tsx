@@ -1,22 +1,22 @@
 
 import React, { useState, useMemo } from 'react';
 import { useData } from '../../hooks/useData';
-// FIX: Import UID type to use in function signatures.
 import { Treatment, AnimalType, UID } from '../../types';
 import { Icons } from '../shared/Icons';
 import AddTreatmentModal from './AddTreatmentModal';
+import ConfirmationModal from '../shared/ConfirmationModal';
 
 interface InfirmaryViewProps {
   searchTerm: string;
 }
 
 const InfirmaryView: React.FC<InfirmaryViewProps> = ({ searchTerm }) => {
-  const { treatments, cows, calves, bulls } = useData();
+  const { treatments, cows, calves, bulls, deleteTreatment } = useData();
   const [animalTypeFilter, setAnimalTypeFilter] = useState<AnimalType | 'All'>('All');
   const [ageFilter, setAgeFilter] = useState<number | null>(null); // age in months
   const [isAddTreatmentModalOpen, setAddTreatmentModalOpen] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ id: UID; name: string } | null>(null);
 
-  // FIX: Changed animalId parameter type from string to UID to match the data type.
   const getAnimalIdentifier = (animalId: UID, animalType: AnimalType): string => {
     switch(animalType) {
       case 'Cow': return cows.find(c => c.id === animalId)?.dib || '';
@@ -26,7 +26,6 @@ const InfirmaryView: React.FC<InfirmaryViewProps> = ({ searchTerm }) => {
     }
   };
   
-  // FIX: Changed animalId parameter type from string to UID to match the data type.
   const getAnimalName = (animalId: UID, animalType: AnimalType) => {
      switch(animalType) {
       case 'Cow': return `Vaca DIB: ${getAnimalIdentifier(animalId, animalType)}`;
@@ -38,6 +37,7 @@ const InfirmaryView: React.FC<InfirmaryViewProps> = ({ searchTerm }) => {
   
   const filteredTreatments = useMemo(() => {
     return treatments
+      .filter(t => !t.isDeleted) // Només tractaments no eliminats
       .filter(t => animalTypeFilter === 'All' || t.animalType === animalTypeFilter)
       .filter(t => {
         if (!ageFilter || t.animalType !== 'Calf') return true;
@@ -55,13 +55,23 @@ const InfirmaryView: React.FC<InfirmaryViewProps> = ({ searchTerm }) => {
 
   const today = new Date().toISOString().split('T')[0];
 
+  const handleDeleteRequest = (id: UID, name: string) => {
+    setDeleteConfirmation({ id, name });
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirmation) {
+      deleteTreatment(deleteConfirmation.id);
+      setDeleteConfirmation(null);
+    }
+  };
+
   return (
     <>
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
         <div className="flex flex-wrap gap-4 items-center justify-between mb-6">
           <h2 className="text-2xl font-bold">Registres de Tractaments</h2>
           <div className="flex flex-wrap gap-4 items-center">
-              {/* Filters */}
               <select 
                   value={animalTypeFilter} 
                   onChange={e => setAnimalTypeFilter(e.target.value as AnimalType | 'All')}
@@ -99,6 +109,7 @@ const InfirmaryView: React.FC<InfirmaryViewProps> = ({ searchTerm }) => {
                 <th className="px-4 py-3">Tipus Tractament</th>
                 <th className="px-4 py-3">Data Aplicació</th>
                 <th className="px-4 py-3">Repetició Necessària</th>
+                <th className="px-4 py-3 w-20">Accions</th>
               </tr>
             </thead>
             <tbody>
@@ -119,6 +130,15 @@ const InfirmaryView: React.FC<InfirmaryViewProps> = ({ searchTerm }) => {
                         'No'
                       )}
                     </td>
+                    <td className="px-4 py-3 text-right">
+                      <button 
+                        onClick={() => handleDeleteRequest(treatment.id, `${treatment.treatmentType} per ${getAnimalName(treatment.animalId, treatment.animalType)}`)}
+                        className="p-2 text-red-600 hover:bg-red-100 rounded-full transition-colors"
+                        title="Eliminar tractament"
+                      >
+                        <Icons.Trash className="w-5 h-5" />
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
@@ -127,6 +147,13 @@ const InfirmaryView: React.FC<InfirmaryViewProps> = ({ searchTerm }) => {
         </div>
       </div>
       <AddTreatmentModal isOpen={isAddTreatmentModalOpen} onClose={() => setAddTreatmentModalOpen(false)} />
+      <ConfirmationModal 
+        isOpen={!!deleteConfirmation}
+        onClose={() => setDeleteConfirmation(null)}
+        onConfirm={confirmDelete}
+        title="Confirmar Eliminació"
+        message={`Segur que vols eliminar ${deleteConfirmation?.name}? Es mourà a la paperera.`}
+      />
     </>
   );
 };

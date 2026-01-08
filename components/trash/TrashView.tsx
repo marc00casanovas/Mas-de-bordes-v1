@@ -8,12 +8,12 @@ import ConfirmationModal from '../shared/ConfirmationModal';
 type TrashItem = {
     id: UID;
     name: string;
-    type: 'Cow' | 'Calf' | 'Bull' | 'Location';
+    type: 'Cow' | 'Calf' | 'Bull' | 'Location' | 'Treatment';
 }
 
 const TrashView: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
     const { 
-        cows, calves, bulls, locations, 
+        cows, calves, bulls, locations, treatments,
         batchRestore, batchPermanentlyDelete
     } = useData();
 
@@ -26,8 +26,9 @@ const TrashView: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
         calves.filter(c => c.status === CalfStatus.Deleted).forEach(c => items.push({ id: c.id, name: `Vedell DIB: ${c.dib}`, type: 'Calf' }));
         bulls.filter(b => b.status === AnimalStatus.Deleted).forEach(b => items.push({ id: b.id, name: `Toro: ${b.name}`, type: 'Bull' }));
         locations.filter(l => l.isDeleted).forEach(l => items.push({ id: l.id, name: `Ubicació: ${l.name}`, type: 'Location' }));
+        treatments.filter(t => t.isDeleted).forEach(t => items.push({ id: t.id, name: `Tractament: ${t.treatmentType}`, type: 'Treatment' }));
         return items;
-    }, [cows, calves, bulls, locations]);
+    }, [cows, calves, bulls, locations, treatments]);
 
     const filteredItems = useMemo(() => 
         trashItems.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase())),
@@ -51,9 +52,9 @@ const TrashView: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
         if(!deleteConfirmation) return;
         
         if(deleteConfirmation.action === 'restore') {
-            batchRestore(deleteConfirmation.items);
+            batchRestore(deleteConfirmation.items as any);
         } else {
-            batchPermanentlyDelete(deleteConfirmation.items);
+            batchPermanentlyDelete(deleteConfirmation.items as any);
         }
         
         setSelectedItems([]);
@@ -89,7 +90,7 @@ const TrashView: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
                     </thead>
                     <tbody>
                         {filteredItems.map(item => (
-                            <tr key={item.id} className="border-b dark:border-gray-700">
+                            <tr key={String(item.id)} className="border-b dark:border-gray-700">
                                 <td className="px-4 py-3 text-center">
                                     <input type="checkbox" checked={selectedItems.some(i => i.id === item.id)} onChange={() => handleSelectItem(item)} />
                                 </td>
